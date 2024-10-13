@@ -3,6 +3,7 @@ fluorescence_assay
 [//]: # (Badges)
 [![GitHub Actions Build Status](https://github.com/choderalab/fluorescence-assay/workflows/CI/badge.svg)](https://github.com/choderalab/fluorescence-assay/actions?query=workflow%3ACI)
 [![codecov](https://codecov.io/gh/choderalab/fluorescence-assay/branch/main/graph/badge.svg)](https://codecov.io/gh/choderalab/fluorescence-assay/branch/main)
+[![Documentation Status](https://readthedocs.org/projects/fluorescence-assay/badge/?version=latest)](https://fluorescence-assay.readthedocs.io/en/latest/?badge=latest)
 
 
 Parse, analyze, model, and visualize data from fluorescence assay.
