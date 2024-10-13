@@ -37,7 +37,7 @@ namespaces = false
 where = ["."]
 
 [tool.setuptools.package-data]
-fluorescence-assay = [
+fluorescence_assay = [
     "py.typed"
 ]
 
@@ -55,4 +55,4 @@ match = ["*"]
 # default-tag = "1.0.0"
 
 [tool.versioningit.write]
-file = "fluorescence-assay/_version.py"
+file = "fluorescence_assay/_version.py"
