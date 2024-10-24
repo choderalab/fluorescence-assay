@@ -3,9 +3,6 @@
 # TEST
 
 
-
-
-
 import logging
 import xml.etree.ElementTree as ET
 from abc import ABC, abstractmethod
