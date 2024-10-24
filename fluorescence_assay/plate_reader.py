@@ -7,7 +7,7 @@ import logging
 import xml.etree.ElementTree as ET
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import List
+from typing import List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 class Measurements(ABC):
     """"""
 
-    def read_file(self, filepath: str, sections: list[str] | None = None) -> None:
+    def read_file(self, filepath: str, sections: Optional[List[str]]) -> None:
         """"""
         self._parse_file(filepath, sections)
         return
@@ -29,7 +29,7 @@ class Measurements(ABC):
     # steps taken in read_file(...)
 
     @abstractmethod
-    def _parse_file(self, filepath: str, sections: list[str] | None = None) -> None:
+    def _parse_file(self, filepath: str, sections: Optional[List[str]]) -> None:
         """"""
         ...
 
@@ -38,7 +38,7 @@ class Measurements(ABC):
 class IControlXML(Measurements):
     _data: dict = field(default_factory=dict, init=False)
 
-    def _parse_file(self, filepath: str, sections: list[str] | None = None) -> None:
+    def _parse_file(self, filepath: str, sections: Optional[List[str]]) -> None:
         """"""
 
         try:
