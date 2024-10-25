@@ -1,6 +1,4 @@
-"""Comment."""
-
-# TEST
+"""Module to parse plate reader outputs."""
 
 
 import logging
@@ -16,29 +14,21 @@ logger = logging.getLogger(__name__)
 class Measurements(ABC):
     """"""
 
-    def read_file(self, filepath: str, sections: Optional[List[str]]) -> None:
-        """"""
-        self._parse_file(filepath, sections)
-        return
-
     @abstractmethod
-    def _get_data(self) -> dict:
+    def read_file(self, filepath: str, *args, **kwargs) -> None:
         """"""
         ...
 
-    # steps taken in read_file(...)
-
     @abstractmethod
-    def _parse_file(self, filepath: str, sections: Optional[List[str]]) -> None:
+    def get_data(self, *args, **kwargs):
         """"""
         ...
-
 
 @dataclass
 class IControlXML(Measurements):
     _data: dict = field(default_factory=dict, init=False)
 
-    def _parse_file(self, filepath: str, sections: Optional[List[str]]) -> None:
+    def read_file(self, filepath: str, filter: Optional[List[str]] = None) -> None:
         """"""
 
         try:
@@ -46,65 +36,25 @@ class IControlXML(Measurements):
             tree = ET.parse(filepath)
             root = tree.getroot()
 
-            # section > data > well > scan
+            def process_well(well):
+                scans = {int(scan.get("WL")): float(scan.text) for scan in well.iter("Scan")}
+                return scans
 
-            for section in root.findall(".//Section"):
+            def process_data(data):
+                wells = {well.get("Pos"): process_well(well) for well in data.iter("Well")}
+                return wells
 
-                if sections is not None and section.get("Name") not in sections:
-                    continue
-                else:
+            def process_section(section):
+                parameters = {parameter.get("Name"): parameter.get("Value") for parameter in section.iter("Parameter")}
+                data = {(data.get("Cycle"),data.get("Temperature")): process_data(data) for data in section.iter("Data")}
+                return {"parameters": parameters,
+                        "data": data}
 
-                    # create section
-
-                    self._data[section.get("Name")] = {"parameters": {}, "data": {}}
-
-                    for parameter in section.findall(".//Parameter"):
-                        parameter_name = parameter.get("Name")
-                        parameter_value = parameter.get("Value")
-                        parameter_unit = parameter.get("Unit")
-
-                        try:
-                            parameter_value = int(parameter_value)
-                        except:
-                            pass
-
-                        self._data[section.get("Name")]["parameters"][
-                            parameter_name
-                        ] = (parameter_value, parameter_unit)
-
-                    # create data
-
-                    for data in section.findall(".//Data"):
-                        cycle = int(data.get("Cycle"))
-                        temperature = int(data.get("Temperature"))
-
-                        self._data[section.get("Name")]["data"][
-                            (cycle, temperature)
-                        ] = {}
-
-                        for well in data.findall(".//Well"):
-                            pos = well.get("Pos")
-
-                            self._data[section.get("Name")]["data"][
-                                (cycle, temperature)
-                            ][pos] = {}
-
-                            for scan in well.findall(".//Scan"):
-                                wl = int(scan.get("WL"))
-                                value = float(scan.text)
-
-                                self._data[section.get("Name")]["data"][
-                                    (cycle, temperature)
-                                ][pos][wl] = value
+            self._data = {section.get("Name"): process_section(section) for section in root.iter("Section") if filter is None or section.get("Name") in filter}
 
         except ET.ParseError as e:
             logging.error(f"Failed to parse the file at {filepath}", exc_info=e)
 
-    def _get_data(self) -> dict:
+    def get_data(self):
+        """"""
         return self._data
-
-    def get_parameter(self, section: str, parameter: str) -> tuple:
-        return self._data[section]["parameters"][parameter]
-
-    def get_value(self, section: str, data: tuple, pos: str, wl: int):
-        return self._data[section]["data"][data][pos][wl]
