@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 import matplotlib
+import matplotlib.axes
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -84,3 +85,49 @@ class IControlXMLPlot(Plot):
         ll = self.get_wavelength_axis(section)
 
         axes.plot(ll, data, color=color, label=label)
+
+    def plot_corrected_spectrum(
+        self,
+        axes: matplotlib.axes._axes.Axes,
+        section: str,
+        well_foreground: str,
+        well_background: str,
+        cycle: Optional[int] = 1,
+        color: Optional[tuple] = (0, 0, 0),
+        label: Optional[str] = None,
+    ) -> None:
+        
+        foreground = np.array(list(self._plate_read.get_well(section, well_foreground, cycle).values()))
+        background = np.array(list(self._plate_read.get_well(section, well_background, cycle).values()))
+
+        difference = foreground - background
+
+        ll = self.get_wavelength_axis(section)
+
+        axes.plot(ll, difference, color=color, label=label)
+
+    def plot_dose_response(
+        self,
+        axes: matplotlib.axes._axes.Axes,
+        section: str,
+        row_foreground: str,
+        row_background: str,
+        wavelength: int,
+        concentrations: list[float],
+        cycle: Optional[int] = 1,
+        color: Optional[tuple] = (0, 0, 0),
+        label: Optional[str] = None,
+    ) -> None:
+        
+        differences = []
+        
+        for i in range(len(concentrations)):
+
+            foreground = self._plate_read.get_well(section, f"{row_foreground}{i+1}", cycle)[wavelength]
+            background = self._plate_read.get_well(section, f"{row_background}{i+1}", cycle)[wavelength]
+
+            difference = foreground - background
+
+            differences.append(difference)
+
+        axes.plot(concentrations, differences, ".", color=color, label=label)
