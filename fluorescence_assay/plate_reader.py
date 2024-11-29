@@ -4,7 +4,6 @@ import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Optional
-
 from bs4 import BeautifulSoup
 
 logger = logging.getLogger(__name__)
@@ -74,5 +73,5 @@ class IControlXML(Measurements):
         return fix_type(
             self._data.select(
                 f'Section[Name="{section}"] > Parameters > Parameter[Name="{parameter}"]'
-            )
+            )[0]["Value"]
         )
