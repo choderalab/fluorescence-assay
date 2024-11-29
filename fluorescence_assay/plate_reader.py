@@ -33,7 +33,7 @@ class Measurements(ABC):
 @dataclass
 class IControlXML(Measurements):
     """"""
-    
+
     _data: dict = field(default_factory=dict, init=False)
 
     def read_file(self, filepath: str, filter: Optional[list[str]] = None) -> None:
