@@ -70,5 +70,9 @@ class IControlXML(Measurements):
                 return float(val)
             except:
                 return val
-            
-        return fix_type(self._data.select(f'Section[Name="{section}"] > Parameters > Parameter[Name="{parameter}"]'))
+
+        return fix_type(
+            self._data.select(
+                f'Section[Name="{section}"] > Parameters > Parameter[Name="{parameter}"]'
+            )
+        )
