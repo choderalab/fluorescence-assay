@@ -2,7 +2,6 @@
 
 import logging
 
-import numpy as np
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Optional
@@ -49,7 +48,7 @@ class IControlXML(Measurements):
             try:
                 return float(val)
             except:
-                return np.nan
+                return float("nan")
 
         data = {int(scan["WL"]): fix_type(scan.contents[0]) for scan in self._data.select(f'Section[Name="{section}"] > Data[Cycle="{str(cycle)}"] > Well[Pos="{well}"] > Scan')}
 
