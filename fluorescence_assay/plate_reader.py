@@ -20,7 +20,12 @@ class Measurements(ABC):
         ...
 
     @abstractmethod
-    def get_data(self, *args, **kwargs):
+    def get_well(self, *args, **kwargs) -> dict:
+        """"""
+        ...
+
+    @abstractmethod
+    def get_parameter(self, *args, **kwargs):
         """"""
         ...
 
@@ -57,3 +62,13 @@ class IControlXML(Measurements):
         }
 
         return data
+
+    def get_parameter(self, section, parameter):
+
+        def fix_type(val):
+            try:
+                return float(val)
+            except:
+                return val
+            
+        return fix_type(self._data.select(f'Section[Name="{section}"] > Parameters > Parameter[Name="{parameter}"]'))
