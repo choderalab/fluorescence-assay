@@ -1,10 +1,13 @@
 """Module to parse plate reader outputs."""
 
 import logging
-import xml.etree.ElementTree as ET
+
+import numpy as np
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import Optional
+
+from bs4 import BeautifulSoup
 
 logger = logging.getLogger(__name__)
 
@@ -31,43 +34,23 @@ class IControlXML(Measurements):
     def read_file(self, filepath: str, filter: Optional[list[str]] = None) -> None:
         """"""
 
-        try:
-
-            tree = ET.parse(filepath)
-            root = tree.getroot()
-
-            def process_well(well):
-                scans = {
-                    int(scan.get("WL")): float(scan.text) for scan in well.iter("Scan")
-                }
-                return scans
-
-            def process_data(data):
-                wells = {
-                    well.get("Pos"): process_well(well) for well in data.iter("Well")
-                }
-                return wells
-
-            def process_section(section):
-                parameters = {
-                    parameter.get("Name"): parameter.get("Value")
-                    for parameter in section.iter("Parameter")
-                }
-                data = {
-                    (data.get("Cycle"), data.get("Temperature")): process_data(data)
-                    for data in section.iter("Data")
-                }
-                return {"parameters": parameters, "data": data}
-
-            self._data = {
-                section.get("Name"): process_section(section)
-                for section in root.iter("Section")
-                if filter is None or section.get("Name") in filter
-            }
-
-        except ET.ParseError as e:
-            logging.error(f"Failed to parse the file at {filepath}", exc_info=e)
+        with open(filepath) as file:
+            self._data = BeautifulSoup(file, "xml")
 
     def get_data(self):
         """"""
+
         return self._data
+    
+    def get_well(self, section, well, cycle: Optional[int] = 1):
+        """"""
+
+        def fix_type(val):
+            try:
+                return float(val)
+            except:
+                return np.nan
+
+        data = {int(scan["WL"]): fix_type(scan.contents[0]) for scan in self._data.select(f'Section[Name="{section}"] > Data[Cycle="{str(cycle)}"] > Well[Pos="{well}"] > Scan')}
+
+        return data
