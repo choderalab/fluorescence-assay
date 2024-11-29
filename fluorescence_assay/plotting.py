@@ -96,9 +96,13 @@ class IControlXMLPlot(Plot):
         color: Optional[tuple] = (0, 0, 0),
         label: Optional[str] = None,
     ) -> None:
-        
-        foreground = np.array(list(self._plate_read.get_well(section, well_foreground, cycle).values()))
-        background = np.array(list(self._plate_read.get_well(section, well_background, cycle).values()))
+
+        foreground = np.array(
+            list(self._plate_read.get_well(section, well_foreground, cycle).values())
+        )
+        background = np.array(
+            list(self._plate_read.get_well(section, well_background, cycle).values())
+        )
 
         difference = foreground - background
 
@@ -118,13 +122,17 @@ class IControlXMLPlot(Plot):
         color: Optional[tuple] = (0, 0, 0),
         label: Optional[str] = None,
     ) -> None:
-        
+
         differences = []
-        
+
         for i in range(len(concentrations)):
 
-            foreground = self._plate_read.get_well(section, f"{row_foreground}{i+1}", cycle)[wavelength]
-            background = self._plate_read.get_well(section, f"{row_background}{i+1}", cycle)[wavelength]
+            foreground = self._plate_read.get_well(
+                section, f"{row_foreground}{i+1}", cycle
+            )[wavelength]
+            background = self._plate_read.get_well(
+                section, f"{row_background}{i+1}", cycle
+            )[wavelength]
 
             difference = foreground - background
 
