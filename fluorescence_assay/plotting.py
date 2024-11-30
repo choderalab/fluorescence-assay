@@ -24,12 +24,16 @@ class Plot(ABC):
     def format_plot(
         self,
         axes: matplotlib.axes._axes.Axes,
+        title: Optional[str] = None,
         xlim: Optional[list[float]] = None,
         ylim: Optional[list[float]] = None,
         xlabel: Optional[str] = None,
         ylabel: Optional[str] = None,
         square: Optional[bool] = False,
     ):
+        
+        if title is not None:
+            axes.set_title(title)
 
         if xlim is not None:
             axes.set_xlim(xlim)
