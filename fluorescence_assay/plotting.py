@@ -31,7 +31,7 @@ class Plot(ABC):
         ylabel: Optional[str] = None,
         square: Optional[bool] = False,
     ):
-        
+
         if title is not None:
             axes.set_title(title)
 
