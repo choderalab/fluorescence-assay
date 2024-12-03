@@ -143,3 +143,52 @@ class IControlXMLPlot(Plot):
             differences.append(difference)
 
         axes.plot(concentrations, differences, ".", color=color, label=label)
+
+    def plot_absorption_spectrum(
+        self,
+        axes: matplotlib.axes._axes.Axes,
+        section: str,
+        well: str,
+        cycle: Optional[int] = 1,
+        color: Optional[tuple] = (0, 0, 0),
+        label: Optional[str] = None,
+    ) -> None:
+
+        data = np.array(list(self._plate_read.get_well(section, well, cycle).values()))
+
+        lmin, lmax, lstep = (
+            self._plate_read.get_parameter(section, parameter)
+            for parameter in [
+                "Wavelength Start",
+                "Wavelength End",
+                "Wavelength Step Size",
+            ]
+        )
+
+        ll =  np.arange(lmin, lmax + lstep, lstep)
+
+        axes.plot(ll, data, color=color, label=label)
+
+    def plot_absorption_across_row(
+        self,
+        axes: matplotlib.axes._axes.Axes,
+        section: str,
+        row: str,
+        wavelength: int,
+        concentrations: list[float],
+        cycle: Optional[int] = 1,
+        color: Optional[tuple] = (0, 0, 0),
+        label: Optional[str] = None,
+    ) -> None:
+
+        values = []
+
+        for i in range(len(concentrations)):
+
+            value = self._plate_read.get_well(
+                section, f"{row}{i+1}", cycle
+            )[wavelength]
+
+            values.append(value)
+
+        axes.plot(concentrations, values, ".", color=color, label=label)
