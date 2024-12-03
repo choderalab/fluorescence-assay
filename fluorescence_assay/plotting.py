@@ -165,7 +165,7 @@ class IControlXMLPlot(Plot):
             ]
         )
 
-        ll =  np.arange(lmin, lmax + lstep, lstep)
+        ll = np.arange(lmin, lmax + lstep, lstep)
 
         axes.plot(ll, data, color=color, label=label)
 
@@ -185,9 +185,7 @@ class IControlXMLPlot(Plot):
 
         for i in range(len(concentrations)):
 
-            value = self._plate_read.get_well(
-                section, f"{row}{i+1}", cycle
-            )[wavelength]
+            value = self._plate_read.get_well(section, f"{row}{i+1}", cycle)[wavelength]
 
             values.append(value)
 
