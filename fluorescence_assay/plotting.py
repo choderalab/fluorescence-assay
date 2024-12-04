@@ -157,12 +157,10 @@ class IControlXMLPlot(Plot):
         data = np.array(list(self._plate_read.get_well(section, well, cycle).values()))
 
         lmin, lmax, lstep = (
-            self._plate_read.get_parameter(section, parameter)
-            for parameter in [
-                "Wavelength Start",
-                "Wavelength End",
-                "Wavelength Step Size",
-            ]
+            # hardcoding these values temporarily
+            # TODO: Undo this!
+
+            240, 805, 5
         )
 
         ll = np.arange(lmin, lmax + lstep, lstep)
