@@ -159,8 +159,9 @@ class IControlXMLPlot(Plot):
         lmin, lmax, lstep = (
             # hardcoding these values temporarily
             # TODO: Undo this!
-
-            240, 805, 5
+            240,
+            805,
+            5,
         )
 
         ll = np.arange(lmin, lmax + lstep, lstep)
