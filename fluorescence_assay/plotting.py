@@ -160,7 +160,7 @@ class IControlXMLPlot(Plot):
             # hardcoding these values temporarily
             # TODO: Undo this!
             240,
-            805,
+            800,
             5,
         )
 
