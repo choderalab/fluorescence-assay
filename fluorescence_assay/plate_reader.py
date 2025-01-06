@@ -20,7 +20,7 @@ class Measurements(ABC):
         ...
 
     @abstractmethod
-    def get_well(self, *args, **kwargs) -> dict:
+    def get_well(self, *args, **kwargs) -> dict[int, float]:
         """"""
         ...
 
