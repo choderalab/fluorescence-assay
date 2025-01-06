@@ -1,9 +1,10 @@
 """Module to plot parsed plate reader ouptputs."""
 
+from dataclasses import dataclass
+from typing import Dict, Optional
+
 import matplotlib.pyplot as plt
 
-from dataclasses import dataclass
-from typing import Optional, Dict
 
 @dataclass
 class Plot:
@@ -17,7 +18,7 @@ class Plot:
         self.ax.set_box_aspect(1)
         plt.close(self.fig)
 
-    def plot_well(self, data: Dict[int, float], line: Optional[str] = None) -> None:
+    def plot_well(self, data: dict[int, float], line: Optional[str] = None) -> None:
 
         if line is None:
             line = "k."
@@ -25,7 +26,13 @@ class Plot:
         for key, value in data.items():
             self.ax.plot(key, value, line)
 
-    def save(self, filename: str, dpi: Optional[int] = None, format: Optional[str] = None, bbox_inches: Optional[str] = None) -> None:
+    def save(
+        self,
+        filename: str,
+        dpi: Optional[int] = None,
+        format: Optional[str] = None,
+        bbox_inches: Optional[str] = None,
+    ) -> None:
 
         if dpi is None:
             dpi = 300
@@ -35,4 +42,3 @@ class Plot:
             bbox_inches = "tight"
 
         self.fig.savefig(filename, dpi=dpi, format=format, bbox_inches=bbox_inches)
-
