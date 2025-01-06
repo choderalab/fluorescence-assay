@@ -3,7 +3,7 @@
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Dict, List, Optional
 
 from bs4 import BeautifulSoup
 
@@ -20,7 +20,12 @@ class Measurements(ABC):
         ...
 
     @abstractmethod
-    def get_well(self, *args, **kwargs) -> dict[int, float]:
+    def get_well(self, *args, **kwargs) -> Dict[int, float]:
+        """"""
+        ...
+
+    @abstractmethod
+    def get_wavelength(self, *args, **kwargs) -> Dict[str, float]:
         """"""
         ...
 
@@ -36,7 +41,13 @@ class IControlXML(Measurements):
 
     _data: dict = field(default_factory=dict, init=False)
 
-    def read_file(self, filepath: str, filter: Optional[list[str]] = None) -> None:
+    def fix_type(self, val):
+            try:
+                return float(val)
+            except:
+                return float("nan")
+
+    def read_file(self, filepath: str) -> None:
         """"""
 
         with open(filepath) as file:
@@ -47,19 +58,30 @@ class IControlXML(Measurements):
 
         return self._data
 
-    def get_well(self, section, well, cycle: Optional[int] = 1):
+    def get_well(self, section, well, cycle: Optional[int] = None):
         """"""
 
-        def fix_type(val):
-            try:
-                return float(val)
-            except:
-                return float("nan")
+        if cycle is None:
+            cycle = 1
 
         data = {
-            int(scan["WL"]): fix_type(scan.contents[0])
+            int(scan["WL"]): self.fix_type(scan.contents[0])
             for scan in self._data.select(
                 f'Section[Name="{section}"] > Data[Cycle="{str(cycle)}"] > Well[Pos="{well}"] > Scan'
+            )
+        }
+
+        return data
+
+    def get_wavelength(self, section, wavelength, cycle: Optional[int] = None):
+        
+        if cycle is None:
+            cycle = 1
+        
+        data = {
+            scan.parent["Pos"]: self.fix_type(scan.contents[0]) 
+            for scan in self._data.select(
+                f'Section[Name="{section}"] > Data[Cycle="{str(cycle)}"] > Well > Scan[WL="{str(wavelength)}"]'
             )
         }
 
