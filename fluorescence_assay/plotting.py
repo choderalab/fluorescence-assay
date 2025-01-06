@@ -1,191 +1,38 @@
 """Module to plot parsed plate reader ouptputs."""
 
-from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
-from typing import Optional
-
-import matplotlib
-import matplotlib.axes
 import matplotlib.pyplot as plt
-import numpy as np
 
-from .plate_reader import IControlXML, Measurements
-
-
-@dataclass
-class Plot(ABC):
-    """"""
-
-    @abstractmethod
-    def load_data(self, Measurement: Measurements, *args, **kwargs) -> None:
-        """"""
-        ...
-
-    def format_plot(
-        self,
-        axes: matplotlib.axes._axes.Axes,
-        title: Optional[str] = None,
-        xlim: Optional[list[float]] = None,
-        ylim: Optional[list[float]] = None,
-        xlabel: Optional[str] = None,
-        ylabel: Optional[str] = None,
-        square: Optional[bool] = False,
-    ):
-
-        if title is not None:
-            axes.set_title(title)
-
-        if xlim is not None:
-            axes.set_xlim(xlim)
-
-        if ylim is not None:
-            axes.set_ylim(ylim)
-
-        if xlabel is not None:
-            axes.set_xlabel(xlabel)
-
-        if ylabel is not None:
-            axes.set_ylabel(ylabel)
-
-        if square == True:
-            axes.set_box_aspect(1)
-
+from dataclasses import dataclass
+from typing import Optional, Dict
 
 @dataclass
-class IControlXMLPlot(Plot):
+class Plot:
     """"""
 
-    _plate_read: dict = field(default_factory=dict, init=False)
+    fig: plt.Figure = None
+    ax: plt.Axes = None
 
-    def load_data(self, IControlXML: IControlXML) -> None:
+    def __post_init__(self):
+        self.fig, self.ax = plt.subplots()
+        self.ax.set_box_aspect(1)
+        plt.close(self.fig)
 
-        self._plate_read = IControlXML
+    def plot_well(self, data: Dict[int, float], line: Optional[str] = None) -> None:
 
-    def get_wavelength_axis(self, section) -> np.ndarray:
+        if line is None:
+            line = "k."
 
-        lmin, lmax, lstep = (
-            self._plate_read.get_parameter(section, parameter)
-            for parameter in [
-                "Emission Wavelength Start",
-                "Emission Wavelength End",
-                "Emission Wavelength Step Size",
-            ]
-        )
+        for key, value in data.items():
+            self.ax.plot(key, value, line)
 
-        return np.arange(lmin, lmax + lstep, lstep)
+    def save(self, filename: str, dpi: Optional[int] = None, format: Optional[str] = None, bbox_inches: Optional[str] = None) -> None:
 
-    def plot_well_spectrum(
-        self,
-        axes: matplotlib.axes._axes.Axes,
-        section: str,
-        well: str,
-        cycle: Optional[int] = 1,
-        color: Optional[tuple] = (0, 0, 0),
-        label: Optional[str] = None,
-    ) -> None:
+        if dpi is None:
+            dpi = 300
+        if format is None:
+            format = "pdf"
+        if bbox_inches is None:
+            bbox_inches = "tight"
 
-        data = np.array(list(self._plate_read.get_well(section, well, cycle).values()))
+        self.fig.savefig(filename, dpi=dpi, format=format, bbox_inches=bbox_inches)
 
-        ll = self.get_wavelength_axis(section)
-
-        axes.plot(ll, data, color=color, label=label)
-
-    def plot_corrected_spectrum(
-        self,
-        axes: matplotlib.axes._axes.Axes,
-        section: str,
-        well_foreground: str,
-        well_background: str,
-        cycle: Optional[int] = 1,
-        color: Optional[tuple] = (0, 0, 0),
-        label: Optional[str] = None,
-    ) -> None:
-
-        foreground = np.array(
-            list(self._plate_read.get_well(section, well_foreground, cycle).values())
-        )
-        background = np.array(
-            list(self._plate_read.get_well(section, well_background, cycle).values())
-        )
-
-        difference = foreground - background
-
-        ll = self.get_wavelength_axis(section)
-
-        axes.plot(ll, difference, color=color, label=label)
-
-    def plot_dose_response(
-        self,
-        axes: matplotlib.axes._axes.Axes,
-        section: str,
-        row_foreground: str,
-        row_background: str,
-        wavelength: int,
-        concentrations: list[float],
-        cycle: Optional[int] = 1,
-        color: Optional[tuple] = (0, 0, 0),
-        label: Optional[str] = None,
-    ) -> None:
-
-        differences = []
-
-        for i in range(len(concentrations)):
-
-            foreground = self._plate_read.get_well(
-                section, f"{row_foreground}{i+1}", cycle
-            )[wavelength]
-            background = self._plate_read.get_well(
-                section, f"{row_background}{i+1}", cycle
-            )[wavelength]
-
-            difference = foreground - background
-
-            differences.append(difference)
-
-        axes.plot(concentrations, differences, ".", color=color, label=label)
-
-    def plot_absorption_spectrum(
-        self,
-        axes: matplotlib.axes._axes.Axes,
-        section: str,
-        well: str,
-        cycle: Optional[int] = 1,
-        color: Optional[tuple] = (0, 0, 0),
-        label: Optional[str] = None,
-    ) -> None:
-
-        data = np.array(list(self._plate_read.get_well(section, well, cycle).values()))
-
-        lmin, lmax, lstep = (
-            # hardcoding these values temporarily
-            # TODO: Undo this!
-            240,
-            800,
-            5,
-        )
-
-        ll = np.arange(lmin, lmax + lstep, lstep)
-
-        axes.plot(ll, data, color=color, label=label)
-
-    def plot_absorption_across_row(
-        self,
-        axes: matplotlib.axes._axes.Axes,
-        section: str,
-        row: str,
-        wavelength: int,
-        concentrations: list[float],
-        cycle: Optional[int] = 1,
-        color: Optional[tuple] = (0, 0, 0),
-        label: Optional[str] = None,
-    ) -> None:
-
-        values = []
-
-        for i in range(len(concentrations)):
-
-            value = self._plate_read.get_well(section, f"{row}{i+1}", cycle)[wavelength]
-
-            values.append(value)
-
-        axes.plot(concentrations, values, ".", color=color, label=label)
