@@ -1,6 +1,7 @@
 """Module to parse plate reader outputs."""
 
 import logging
+import numpy as np
 import pandas as pd
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
@@ -46,12 +47,71 @@ class Data(ABC):
                     df = pd.DataFrame(cycle_data)
                     df = df.apply(pd.to_numeric, errors="coerce")
 
-                    self._data[f"{file}_{section}_{cycle}"] = df
+                    self._data[f"{file}_{section}_{cycle}"] = DFData(df)
+
+    def get_df(self, df: str) -> pd.DataFrame:
+
+        return self._data[df]
         
-    def export_to_excel(self, filepath: str) -> None:
+    # def export_to_excel(self, filepath: str) -> None:
 
-        with pd.ExcelWriter(filepath) as writer:
+    #     with pd.ExcelWriter(filepath) as writer:
 
-            for sheet_name, sheet_data in self._data.items():
+    #         for sheet_name, sheet_data in self._data.items():
 
-                sheet_data.to_excel(writer, sheet_name=sheet_name)
+    #             sheet_data.to_excel(writer, sheet_name=sheet_name)
+
+@dataclass
+class DFData:
+    """"""
+
+    df: pd.DataFrame
+
+    def get_WL(self, WL: int):
+        """"""
+
+        return Wavelength(self.df.loc[str(WL)])
+    
+    def get_plate(self, WL: int, format: Optional[int] = None):
+        """"""
+
+        if format is None:
+            format = "96"
+
+        if format == "96":
+            plate = np.zeros((8,12))
+
+        data = self.get_WL(WL)
+
+        for series_index in data.index.tolist():
+
+            alpha2num = {"A": 0, "B": 1, "C": 2, "D": 3, "E": 4, "F": 5, "G": 6, "H": 7}
+
+            row = alpha2num[series_index[0]]
+            col = int(series_index[1]) - 1
+
+            plate[row, col] = data.loc[series_index]
+
+        return plate
+    
+@dataclass
+class Wavelength:
+    """"""
+
+    series: pd.Series
+
+    @property
+    def plate(self):
+
+        plate = np.zeros((8,12))
+        
+        for series_index in self.series.index.tolist():
+
+            alpha2num = {"A": 0, "B": 1, "C": 2, "D": 3, "E": 4, "F": 5, "G": 6, "H": 7}
+
+            row = alpha2num[series_index[0]]
+            col = int(series_index[1]) - 1
+
+            plate[row, col] = self.series.loc[series_index]
+
+        return plate
