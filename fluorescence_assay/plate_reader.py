@@ -45,6 +45,11 @@ class IControlXML(Measurements):
             } for cycle in section.select("Data")
         } for section in input.select("Section")}
 
+    def get_dict(self) -> Dict:
+        """"""
+
+        return self._data
+
     def to_df(self, numeric: Optional[bool] = None) -> Dict[str, pd.DataFrame]:
         """"""
 
