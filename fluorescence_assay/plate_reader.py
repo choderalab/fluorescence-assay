@@ -12,73 +12,46 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass
-class Measurements(ABC):
+class Data(ABC):
     """"""
 
-    @abstractmethod
-    def read_file(self, filepath: str, *args, **kwargs) -> None:
-        """"""
-        ...
-
-    @abstractmethod
-    def to_df(self, *args, **kwargs) -> Dict[str, pd.DataFrame]:
-        """"""
-        ...
-
-@dataclass
-class IControlXML(Measurements):
-    """"""
     _data: dict = field(default_factory=dict, init=False)
 
-    def read_file(self, filepath: str, name: Optional[str] = None) -> None:
+    def read_IControlXML(self, filepath: str, name: Optional[str] = None) -> None:
         """"""
 
         if name is None:
             name = filepath
 
+        xmldict = {}
+
         with open(filepath) as file:
             input = BeautifulSoup(file, "xml")
 
-        self._data[name] = {section["Name"]: {
+        # parse XML for relevant information
+        # store in nested dictionary
+
+        xmldict[name] = {section["Name"]: {
             cycle["Cycle"]: {
                 well["Pos"]: {scan["WL"]: scan.contents[0] for scan in well.select("Scan")} for well in cycle.select("Well")
             } for cycle in section.select("Data")
         } for section in input.select("Section")}
 
-    def get_dict(self) -> Dict:
-        """"""
+        # convert to DataFrame
 
-        return self._data
-
-    def to_df(self, numeric: Optional[bool] = None) -> Dict[str, pd.DataFrame]:
-        """"""
-
-        if numeric is None:
-            numeric = True
-        else:
-            numeric = False
-
-        output = {}
-
-        for file, file_data in self._data.items():
+        for file, file_data in xmldict.items():
             for section, section_data in file_data.items():
                 for cycle, cycle_data in section_data.items():
-                    
+
                     df = pd.DataFrame(cycle_data)
+                    df = df.apply(pd.to_numeric, errors="coerce")
 
-                    if numeric:
-                        df = df.apply(pd.to_numeric, errors="coerce")
-
-                    output[f"{file}_{section}_{cycle}"] = df
-
-        return output
-    
+                    self._data[f"{file}_{section}_{cycle}"] = df
+        
     def export_to_excel(self, filepath: str) -> None:
 
         with pd.ExcelWriter(filepath) as writer:
 
-            df = self.to_df()
-
-            for sheet_name, sheet_data in df.items():
+            for sheet_name, sheet_data in self._data.items():
 
                 sheet_data.to_excel(writer, sheet_name=sheet_name)
