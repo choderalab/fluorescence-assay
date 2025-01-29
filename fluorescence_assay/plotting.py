@@ -1,44 +1,54 @@
 """Module to plot parsed plate reader ouptputs."""
 
 from dataclasses import dataclass
-from typing import Dict, Optional
+from typing import List, Dict, Tuple, Callable, Union, Optional
 
+from matplotlib.axes import Axes
+
+import numpy as np
 import matplotlib.pyplot as plt
+import pandas as pd
 
+def plot_fluorescence_spectrum(data: List[pd.Series], conc: List[float], title: Optional[str] = None):
 
-@dataclass
-class Plot:
-    """"""
+    fig, ax = plt.subplots()
 
-    fig: plt.Figure = None
-    ax: plt.Axes = None
+    cmap_color = plt.get_cmap("winter")
 
-    def __post_init__(self):
-        self.fig, self.ax = plt.subplots()
-        self.ax.set_box_aspect(1)
-        plt.close(self.fig)
+    norm = plt.Normalize(vmin=min(conc), vmax=max(conc))
 
-    def plot_well(self, data: dict[int, float], line: Optional[str] = None) -> None:
+    xx = []
 
-        if line is None:
-            line = "k."
+    for i in range(len(data)):
 
-        for key, value in data.items():
-            self.ax.plot(key, value, line)
+        series = data[i]
 
-    def save(
-        self,
-        filename: str,
-        dpi: Optional[int] = None,
-        format: Optional[str] = None,
-        bbox_inches: Optional[str] = None,
-    ) -> None:
+        xx_i = [int(x) for x in series.index.to_list()]
+        yy_i = series.to_numpy()
 
-        if dpi is None:
-            dpi = 300
-        if format is None:
-            format = "pdf"
-        if bbox_inches is None:
-            bbox_inches = "tight"
+        ax.plot(xx_i, yy_i, color=cmap_color(norm(conc[i])))
 
-        self.fig.savefig(filename, dpi=dpi, format=format, bbox_inches=bbox_inches)
+        xx += xx_i
+
+    xmin = min(xx)
+    xmax = max(xx)
+
+    xticks = np.arange(xmin, xmax+20, 20)
+
+    ax.set_box_aspect(1)
+    ax.set_yscale("log")
+
+    ax.set_xlim((xmin, xmax))
+    ax.set_ylim((int(1e1),int(1e6)))
+    ax.set_xticks(xticks)
+
+    ax.set_xlabel("Wavelength (nm)")
+    ax.set_ylabel("Fluorescence (RFU)")
+
+    sm = plt.cm.ScalarMappable(cmap=cmap_color, norm=norm)
+    sm.set_array([])
+    cbar1 = plt.colorbar(sm, ax=ax)
+    cbar1.set_label(f"Ligand concentration (µM)")
+
+    if title is not None:
+        ax.set_title(title)

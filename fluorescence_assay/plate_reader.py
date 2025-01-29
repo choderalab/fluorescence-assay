@@ -53,13 +53,13 @@ class Data(ABC):
 
         return self._data[df]
         
-    # def export_to_excel(self, filepath: str) -> None:
+    def to_excel(self, filepath: str) -> None:
 
-    #     with pd.ExcelWriter(filepath) as writer:
+        with pd.ExcelWriter(filepath) as writer:
 
-    #         for sheet_name, sheet_data in self._data.items():
+            for sheet_name in self._data.keys():
 
-    #             sheet_data.to_excel(writer, sheet_name=sheet_name)
+                self.get_df(sheet_name).pd.to_excel(writer, sheet_name=sheet_name)
 
 @dataclass
 class DFData:
@@ -93,6 +93,17 @@ class DFData:
             plate[row, col] = data.loc[series_index]
 
         return plate
+    
+    def get_well(self, well: str) -> pd.Series:
+        """"""
+
+        return self.df[well]
+    
+    @property
+    def pd(self):
+        """"""
+
+        return self.df
     
 @dataclass
 class Wavelength:
