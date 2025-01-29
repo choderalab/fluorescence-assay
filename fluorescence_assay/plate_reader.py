@@ -1,6 +1,7 @@
 """Module to parse plate reader outputs."""
 
 import logging
+import pandas as pd
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
@@ -20,83 +21,33 @@ class Measurements(ABC):
         ...
 
     @abstractmethod
-    def get_well(self, *args, **kwargs) -> Dict[int, float]:
+    def to_df(self, *args, **kwargs) -> Dict[str, pd.DataFrame]:
         """"""
         ...
-
-    @abstractmethod
-    def get_wavelength(self, *args, **kwargs) -> Dict[str, float]:
-        """"""
-        ...
-
-    @abstractmethod
-    def get_parameter(self, *args, **kwargs):
-        """"""
-        ...
-
 
 @dataclass
 class IControlXML(Measurements):
     """"""
-
     _data: dict = field(default_factory=dict, init=False)
-
-    def fix_type(self, val):
-            try:
-                return float(val)
-            except:
-                return float("nan")
 
     def read_file(self, filepath: str) -> None:
         """"""
 
         with open(filepath) as file:
-            self._data = BeautifulSoup(file, "xml")
+            input = BeautifulSoup(file, "xml")
 
-    def get_data(self):
-        """"""
+        self._data = {section["Name"]: {
+            cycle["Cycle"]: {
+                well["Pos"]: {scan["WL"]: scan.contents[0] for scan in well.select("Scan")} for well in cycle.select("Well")
+            } for cycle in section.select("Data")
+        } for section in input.select("Section")}
 
-        return self._data
+    def to_df(self) -> Dict[str, pd.DataFrame]:
 
-    def get_well(self, section, well, cycle: Optional[int] = None):
-        """"""
+        output = {}
 
-        if cycle is None:
-            cycle = 1
+        for section in self._data.keys():
+            for cycle in self._data[section].keys():
+                output[f"{section}_{cycle}"] = pd.DataFrame(self._data[section][cycle])
 
-        data = {
-            int(scan["WL"]): self.fix_type(scan.contents[0])
-            for scan in self._data.select(
-                f'Section[Name="{section}"] > Data[Cycle="{str(cycle)}"] > Well[Pos="{well}"] > Scan'
-            )
-        }
-
-        return data
-
-    def get_wavelength(self, section, wavelength, cycle: Optional[int] = None):
-        
-        if cycle is None:
-            cycle = 1
-        
-        data = {
-            scan.parent["Pos"]: self.fix_type(scan.contents[0]) 
-            for scan in self._data.select(
-                f'Section[Name="{section}"] > Data[Cycle="{str(cycle)}"] > Well > Scan[WL="{str(wavelength)}"]'
-            )
-        }
-
-        return data
-
-    def get_parameter(self, section, parameter):
-
-        def fix_type(val):
-            try:
-                return float(val)
-            except:
-                return val
-
-        return fix_type(
-            self._data.select(
-                f'Section[Name="{section}"] > Parameters > Parameter[Name="{parameter}"]'
-            )[0]["Value"]
-        )
+        return output
