@@ -52,3 +52,30 @@ def plot_fluorescence_spectrum(data: List[pd.Series], conc: List[float], title: 
 
     if title is not None:
         ax.set_title(title)
+
+def plot_dose_response_curve(protein: List[float], drug: List[float], conc: List[float], fraction_bound: Optional[bool] = None):
+
+    if fraction_bound is None:
+        fraction_bound = True
+    else:
+        fraction_bound = False
+
+    dose_response = protein - drug
+
+    fig, ax = plt.subplots()
+
+    if fraction_bound:
+        F_max = np.max(dose_response)
+        F_min = np.min(dose_response)
+
+        F_bound = (dose_response - F_min)/(F_max - F_min)
+
+        ax.plot(conc, F_bound, "r.")
+        ax.set_ylabel("Fraction Bound")
+    else:
+        ax.plot(conc, dose_response, "r.")
+        ax.set_ylabel("Corrected Fluorescence (RFU)")
+        
+    ax.set_xscale("log")
+    ax.set_xlabel("Ligand Concentration (µM)")
+    ax.set_box_aspect(1)
