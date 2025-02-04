@@ -1,12 +1,12 @@
 """Module to parse plate reader outputs."""
 
 import logging
-import numpy as np
-import pandas as pd
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
+import numpy as np
+import pandas as pd
 from bs4 import BeautifulSoup
 
 logger = logging.getLogger(__name__)
@@ -32,11 +32,18 @@ class Data(ABC):
         # parse XML for relevant information
         # store in nested dictionary
 
-        xmldict[name] = {section["Name"]: {
-            cycle["Cycle"]: {
-                well["Pos"]: {scan["WL"]: scan.contents[0] for scan in well.select("Scan")} for well in cycle.select("Well")
-            } for cycle in section.select("Data")
-        } for section in input.select("Section")}
+        xmldict[name] = {
+            section["Name"]: {
+                cycle["Cycle"]: {
+                    well["Pos"]: {
+                        scan["WL"]: scan.contents[0] for scan in well.select("Scan")
+                    }
+                    for well in cycle.select("Well")
+                }
+                for cycle in section.select("Data")
+            }
+            for section in input.select("Section")
+        }
 
         # convert to DataFrame
 
@@ -52,7 +59,7 @@ class Data(ABC):
     def get_df(self, df: str) -> pd.DataFrame:
 
         return self._data[df]
-        
+
     def to_excel(self, filepath: str) -> None:
 
         with pd.ExcelWriter(filepath) as writer:
@@ -60,6 +67,7 @@ class Data(ABC):
             for sheet_name in self._data.keys():
 
                 self.get_df(sheet_name).pd.to_excel(writer, sheet_name=sheet_name)
+
 
 @dataclass
 class DFData:
@@ -71,7 +79,7 @@ class DFData:
         """"""
 
         return Wavelength(self.df.loc[str(WL)])
-    
+
     def get_plate(self, WL: int, format: Optional[int] = None):
         """"""
 
@@ -79,7 +87,7 @@ class DFData:
             format = "96"
 
         if format == "96":
-            plate = np.zeros((8,12))
+            plate = np.zeros((8, 12))
 
         data = self.get_WL(WL)
 
@@ -93,18 +101,19 @@ class DFData:
             plate[row, col] = data.loc[series_index]
 
         return plate
-    
+
     def get_well(self, well: str) -> pd.Series:
         """"""
 
         return self.df[well]
-    
+
     @property
     def pd(self):
         """"""
 
         return self.df
-    
+
+
 @dataclass
 class Wavelength:
     """"""
@@ -114,8 +123,8 @@ class Wavelength:
     @property
     def plate(self):
 
-        plate = np.zeros((8,12))
-        
+        plate = np.zeros((8, 12))
+
         for series_index in self.series.index.tolist():
 
             alpha2num = {"A": 0, "B": 1, "C": 2, "D": 3, "E": 4, "F": 5, "G": 6, "H": 7}

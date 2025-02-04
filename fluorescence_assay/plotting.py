@@ -1,15 +1,17 @@
 """Module to plot parsed plate reader ouptputs."""
 
 from dataclasses import dataclass
-from typing import List, Dict, Tuple, Callable, Union, Optional
+from typing import Callable, Dict, List, Optional, Tuple, Union
 
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 from matplotlib.axes import Axes
 
-import numpy as np
-import matplotlib.pyplot as plt
-import pandas as pd
 
-def plot_fluorescence_spectrum(data: List[pd.Series], conc: List[float], title: Optional[str] = None):
+def plot_fluorescence_spectrum(
+    data: list[pd.Series], conc: list[float], title: Optional[str] = None
+):
 
     fig, ax = plt.subplots()
 
@@ -33,13 +35,13 @@ def plot_fluorescence_spectrum(data: List[pd.Series], conc: List[float], title: 
     xmin = min(xx)
     xmax = max(xx)
 
-    xticks = np.arange(xmin, xmax+20, 20)
+    xticks = np.arange(xmin, xmax + 20, 20)
 
     ax.set_box_aspect(1)
     ax.set_yscale("log")
 
     ax.set_xlim((xmin, xmax))
-    ax.set_ylim((int(1e1),int(1e6)))
+    ax.set_ylim((int(1e1), int(1e6)))
     ax.set_xticks(xticks)
 
     ax.set_xlabel("Wavelength (nm)")
@@ -53,7 +55,13 @@ def plot_fluorescence_spectrum(data: List[pd.Series], conc: List[float], title: 
     if title is not None:
         ax.set_title(title)
 
-def plot_dose_response_curve(protein: List[float], drug: List[float], conc: List[float], fraction_bound: Optional[bool] = None):
+
+def plot_dose_response_curve(
+    protein: list[float],
+    drug: list[float],
+    conc: list[float],
+    fraction_bound: Optional[bool] = None,
+):
 
     if fraction_bound is None:
         fraction_bound = True
@@ -68,14 +76,14 @@ def plot_dose_response_curve(protein: List[float], drug: List[float], conc: List
         F_max = np.max(dose_response)
         F_min = np.min(dose_response)
 
-        F_bound = (dose_response - F_min)/(F_max - F_min)
+        F_bound = (dose_response - F_min) / (F_max - F_min)
 
         ax.plot(conc, F_bound, "r.")
         ax.set_ylabel("Fraction Bound")
     else:
         ax.plot(conc, dose_response, "r.")
         ax.set_ylabel("Corrected Fluorescence (RFU)")
-        
+
     ax.set_xscale("log")
     ax.set_xlabel("Ligand Concentration (µM)")
     ax.set_box_aspect(1)
