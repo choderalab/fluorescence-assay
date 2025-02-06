@@ -1,18 +1,21 @@
 """Module to plot parsed plate reader ouptputs."""
 
 from dataclasses import dataclass
-from typing import List, Dict, Tuple, Callable, Union, Optional
-
-from matplotlib.axes import Axes
-from matplotlib.figure import Figure
+from typing import Callable, Dict, List, Optional, Tuple, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from matplotlib.axes import Axes
+from matplotlib.figure import Figure
 
 
-def plot_fluorescence_spectra(spectra: List[pd.Series], concentrations: List[float], axes: Optional[Axes] = None, cmap: Optional[str] = None) -> None:
+def plot_fluorescence_spectra(
+    spectra: list[pd.Series],
+    concentrations: list[float],
+    axes: Optional[Axes] = None,
+    cmap: Optional[str] = None,
+) -> None:
     """"""
 
     if axes is None:
@@ -34,13 +37,16 @@ def plot_fluorescence_spectra(spectra: List[pd.Series], concentrations: List[flo
         xx_i = [int(x) for x in spectrum.index.to_list()]
         yy_i = spectrum.to_numpy()
 
-        c = cmap(1-norm(concentrations[i]))
+        c = cmap(1 - norm(concentrations[i]))
 
         axes.plot(xx_i, yy_i, color=c)
 
         # TODO: Colorbar
 
-def plot_absorbance_spectrum(concentrations: List[float], spectrum: List[float], axes: Optional[Axes] = None) -> None:
+
+def plot_absorbance_spectrum(
+    concentrations: list[float], spectrum: list[float], axes: Optional[Axes] = None
+) -> None:
     """"""
 
     if axes is None:
@@ -48,7 +54,10 @@ def plot_absorbance_spectrum(concentrations: List[float], spectrum: List[float],
 
     axes.plot(concentrations, spectrum)
 
-def plot_dose_response(concentrations: List[float], dose_response: List[float], axes: Optional[Axes] = None) -> None:
+
+def plot_dose_response(
+    concentrations: list[float], dose_response: list[float], axes: Optional[Axes] = None
+) -> None:
     """"""
 
     if axes is None:
@@ -56,7 +65,17 @@ def plot_dose_response(concentrations: List[float], dose_response: List[float], 
 
     axes.plot(concentrations, dose_response)
 
-def create_grid_of_plots(rows: int, cols: int, hspace: Optional[float], wspace: Optional[float], xlabel: Optional[str] = None, ylabel: Optional[str] = None, titles: Optional[List[str]] = None, fig: Optional[Figure] = None) -> List[Axes]:
+
+def create_grid_of_plots(
+    rows: int,
+    cols: int,
+    hspace: Optional[float],
+    wspace: Optional[float],
+    xlabel: Optional[str] = None,
+    ylabel: Optional[str] = None,
+    titles: Optional[list[str]] = None,
+    fig: Optional[Figure] = None,
+) -> list[Axes]:
     """"""
 
     if fig is None:
@@ -75,12 +94,12 @@ def create_grid_of_plots(rows: int, cols: int, hspace: Optional[float], wspace: 
         ax.label_outer()
 
     if xlabel is not None:
-        xplots = np.arange(rows*cols - cols, rows*cols)
+        xplots = np.arange(rows * cols - cols, rows * cols)
         for i in xplots:
             axes[i].set_xlabel(xlabel)
 
     if ylabel is not None:
-        yplots = cols*np.arange(0, rows)
+        yplots = cols * np.arange(0, rows)
         for i in yplots:
             axes[i].set_ylabel(ylabel)
 

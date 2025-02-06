@@ -1,18 +1,20 @@
 """Module to analyze data, including curve fitting."""
 
 import logging
-from typing import Dict, List
+from typing import Dict, List, Union
 
 import numpy as np
 import pandas as pd
-
-from typing import Dict, List, Union
-
 from scipy.optimize import curve_fit
 
 logger = logging.getLogger(__name__)
 
-def calculate_dose_response(dosed: Union[List[float],List[np.array]], ref: Union[List[float],List[np.array]], conc: Union[List[float],List[np.array]]) -> pd.Series:
+
+def calculate_dose_response(
+    dosed: Union[list[float], list[np.array]],
+    ref: Union[list[float], list[np.array]],
+    conc: Union[list[float], list[np.array]],
+) -> pd.Series:
     """"""
 
     dosed = np.array(dosed)
@@ -23,6 +25,7 @@ def calculate_dose_response(dosed: Union[List[float],List[np.array]], ref: Union
 
     return pd.Series(diff, index=conc)
 
+
 def calculate_fraction_bound(dose_response: pd.Series) -> pd.Series:
     """"""
 
@@ -32,6 +35,6 @@ def calculate_fraction_bound(dose_response: pd.Series) -> pd.Series:
     F_max = np.max(arr)
     F_min = np.min(arr)
 
-    F_bound = (arr - F_min)/(F_max - F_min)
+    F_bound = (arr - F_min) / (F_max - F_min)
 
     return pd.Series(F_bound, index=conc)

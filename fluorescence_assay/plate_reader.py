@@ -106,17 +106,26 @@ class DFData:
         """"""
 
         return self.df[well]
-    
-    def get_row(self, row: Union[str, int]) -> List[pd.Series]:
+
+    def get_row(self, row: Union[str, int]) -> list[pd.Series]:
         """"""
 
-        num2alpha = {"0": "A", "1": "B", "2": "C", "3": "D", "4": "E", "5": "F", "6": "G", "7": "H"}
+        num2alpha = {
+            "0": "A",
+            "1": "B",
+            "2": "C",
+            "3": "D",
+            "4": "E",
+            "5": "F",
+            "6": "G",
+            "7": "H",
+        }
 
         if type(row) == int:
             row = num2alpha[str(row)]
 
         return [self.get_well(pos) for pos in [f"{row}{i}" for i in range(1, 13)]]
-    
+
     @property
     def pd(self):
         """"""
@@ -145,7 +154,7 @@ class Wavelength:
             plate[row, col] = self.series.loc[series_index]
 
         return plate
-    
+
     def get_row(self, row: Union[str, int]):
 
         if type(row) == str:
