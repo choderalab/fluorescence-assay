@@ -4,8 +4,32 @@ import logging
 import numpy as np
 import pandas as pd
 
-from typing import Dict, List
+from typing import Dict, List, Union
 
 from scipy.optimize import curve_fit
 
 logger = logging.getLogger(__name__)
+
+def calculate_dose_response(dosed: Union[List[float],List[np.array]], ref: Union[List[float],List[np.array]], conc: Union[List[float],List[np.array]]) -> pd.Series:
+    """"""
+
+    dosed = np.array(dosed)
+    ref = np.array(ref)
+    conc = np.array(conc)
+
+    diff = np.array(dosed) - np.array(ref)
+
+    return pd.Series(diff, index=conc)
+
+def calculate_fraction_bound(dose_response: pd.Series) -> pd.Series:
+    """"""
+
+    conc = np.array(pd.Series.index.to_list())
+    arr = dose_response.to_numpy()
+
+    F_max = np.max(arr)
+    F_min = np.min(arr)
+
+    F_bound = (arr - F_min)/(F_max - F_min)
+
+    return pd.Series(F_bound, index=conc)
