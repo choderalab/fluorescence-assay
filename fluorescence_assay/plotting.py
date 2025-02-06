@@ -6,9 +6,11 @@ from typing import List, Dict, Tuple, Callable, Union, Optional
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
+from matplotlib.axes import Axes
+
 
 def plot_fluorescence_spectra(spectra: List[pd.Series], concentrations: List[float], axes: Optional[Axes] = None, cmap: Optional[str] = None) -> None:
     """"""
