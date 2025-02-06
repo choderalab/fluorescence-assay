@@ -4,78 +4,87 @@ from dataclasses import dataclass
 from typing import List, Dict, Tuple, Callable, Union, Optional
 
 from matplotlib.axes import Axes
+from matplotlib.figure import Figure
 
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 
-def plot_fluorescence_spectrum(data: List[pd.Series], conc: List[float], title: Optional[str] = None):
+def plot_fluorescence_spectra(spectra: List[pd.Series], concentrations: List[float], axes: Optional[Axes] = None, cmap: Optional[str] = None) -> None:
+    """"""
 
-    fig, ax = plt.subplots()
+    if axes is None:
+        fig, axes = plt.subplots()
 
-    cmap_color = plt.get_cmap("winter")
+    if cmap is None:
+        cmap = "winter"
 
-    norm = plt.Normalize(vmin=min(conc), vmax=max(conc))
+    cmap = plt.get_cmap(cmap)
 
-    xx = []
+    norm = plt.Normalize(vmin=min(concentrations), vmax=max(concentrations))
 
-    for i in range(len(data)):
+    numSpectra = len(concentrations)
 
-        series = data[i]
+    for i in range(numSpectra):
 
-        xx_i = [int(x) for x in series.index.to_list()]
-        yy_i = series.to_numpy()
+        spectrum = spectra[i]
 
-        ax.plot(xx_i, yy_i, color=cmap_color(norm(conc[i])))
+        xx_i = [int(x) for x in spectrum.index.to_list()]
+        yy_i = spectrum.to_numpy()
 
-        xx += xx_i
+        c = cmap(1-norm(concentrations[i]))
 
-    xmin = min(xx)
-    xmax = max(xx)
+        axes.plot(xx_i, yy_i, color=c)
 
-    xticks = np.arange(xmin, xmax+20, 20)
+        # TODO: Colorbar
 
-    ax.set_box_aspect(1)
-    ax.set_yscale("log")
+def plot_absorbance_spectrum(concentrations: List[float], spectrum: List[float], axes: Optional[Axes] = None) -> None:
+    """"""
 
-    ax.set_xlim((xmin, xmax))
-    ax.set_ylim((int(1e1),int(1e6)))
-    ax.set_xticks(xticks)
+    if axes is None:
+        fig, axes = plt.subplots()
 
-    ax.set_xlabel("Wavelength (nm)")
-    ax.set_ylabel("Fluorescence (RFU)")
+    axes.plot(concentrations, spectrum)
 
-    sm = plt.cm.ScalarMappable(cmap=cmap_color, norm=norm)
-    sm.set_array([])
-    cbar1 = plt.colorbar(sm, ax=ax)
-    cbar1.set_label(f"Ligand concentration (µM)")
+def plot_dose_response(concentrations: List[float], dose_response: List[float], axes: Optional[Axes] = None) -> None:
+    """"""
 
-    if title is not None:
-        ax.set_title(title)
+    if axes is None:
+        fig, axes = plt.subplots()
 
-def plot_dose_response_curve(protein: List[float], drug: List[float], conc: List[float], fraction_bound: Optional[bool] = None):
+    axes.plot(concentrations, dose_response)
 
-    if fraction_bound is None:
-        fraction_bound = True
-    else:
-        fraction_bound = False
+def create_grid_of_plots(rows: int, cols: int, hspace: Optional[float], wspace: Optional[float], xlabel: Optional[str] = None, ylabel: Optional[str] = None, titles: Optional[List[str]] = None, fig: Optional[Figure] = None) -> List[Axes]:
+    """"""
 
-    dose_response = protein - drug
+    if fig is None:
+        fig = plt.figure()
+    if hspace is None:
+        hspace = 0
+    if wspace is None:
+        wspace = 0
 
-    fig, ax = plt.subplots()
+    gs = fig.add_gridspec(rows, cols, hspace=hspace, wspace=wspace)
+    _ = gs.subplots(sharex="col", sharey="row")
 
-    if fraction_bound:
-        F_max = np.max(dose_response)
-        F_min = np.min(dose_response)
+    axes = fig.get_axes()
 
-        F_bound = (dose_response - F_min)/(F_max - F_min)
+    for ax in axes:
+        ax.label_outer()
 
-        ax.plot(conc, F_bound, "r.")
-        ax.set_ylabel("Fraction Bound")
-    else:
-        ax.plot(conc, dose_response, "r.")
-        ax.set_ylabel("Corrected Fluorescence (RFU)")
-        
-    ax.set_xscale("log")
-    ax.set_xlabel("Ligand Concentration (µM)")
-    ax.set_box_aspect(1)
+    if xlabel is not None:
+        xplots = np.arange(rows*cols - cols, rows*cols)
+        for i in xplots:
+            axes[i].set_xlabel(xlabel)
+
+    if ylabel is not None:
+        yplots = cols*np.arange(0, rows)
+        for i in yplots:
+            axes[i].set_ylabel(ylabel)
+
+    if titles is not None:
+        titleplots = np.arange(0, cols)
+        for i in titleplots:
+            axes[i].set_title(titles[i])
+
+    return axes

@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 
 from bs4 import BeautifulSoup
 
@@ -99,6 +99,16 @@ class DFData:
 
         return self.df[well]
     
+    def get_row(self, row: Union[str, int]) -> List[pd.Series]:
+        """"""
+
+        num2alpha = {"0": "A", "1": "B", "2": "C", "3": "D", "4": "E", "5": "F", "6": "G", "7": "H"}
+
+        if type(row) == int:
+            row = num2alpha[str(row)]
+
+        return [self.get_well(pos) for pos in [f"{row}{i}" for i in range(1, 13)]]
+    
     @property
     def pd(self):
         """"""
@@ -111,6 +121,8 @@ class Wavelength:
 
     series: pd.Series
 
+    alpha2num = {"A": 0, "B": 1, "C": 2, "D": 3, "E": 4, "F": 5, "G": 6, "H": 7}
+
     @property
     def plate(self):
 
@@ -118,11 +130,16 @@ class Wavelength:
         
         for series_index in self.series.index.tolist():
 
-            alpha2num = {"A": 0, "B": 1, "C": 2, "D": 3, "E": 4, "F": 5, "G": 6, "H": 7}
-
-            row = alpha2num[series_index[0]]
+            row = self.alpha2num[series_index[0]]
             col = int(series_index[1]) - 1
 
             plate[row, col] = self.series.loc[series_index]
 
         return plate
+    
+    def get_row(self, row: Union[str, int]):
+
+        if type(row) == str:
+            row = self.alpha2num[row]
+
+        return self.plate[row]
