@@ -320,6 +320,8 @@ def plot_absorbance_280(
     ax.set_title(f"{protein}:{ligand}")
     ax.legend()
 
+    plt.suptitle(f"{protein}:{ligand}")
+
     if pdf is not None:
         pdf.savefig()
         plt.close()
@@ -357,6 +359,62 @@ def plot_dose_response_curves(
         dose_response = pos - neg
 
         axes[i].plot(concentrations, dose_response, "ko")
+
+    plt.suptitle(f"{protein}:{ligand}")
+
+    if pdf is not None:
+        pdf.savefig()
+        plt.close()
+
+def plot_dose_response_curves_dotproduct(
+    df: plate_reader.DFData,
+    concentrations: list[float],
+    protein: str,
+    ligand: str,
+    pdf: Optional[PdfPages] = None,
+):
+    """"""
+
+    fig = plt.figure(figsize=(21, 7))
+
+    axes = create_grid_of_plots(
+        1,
+        3,
+        hspace=0,
+        wspace=0.05,
+        fig=fig,
+        xlabel="Concentration (µM)",
+        ylabel="Corrected Emission at 440 nm (RFU)",
+        titles=["Replicate 1", "Replicate 2", "Replicate 3"],
+    )
+
+    dose_response_map = {"0": ("A", "B"), "1": ("C", "D"), "2": ("E", "F")}
+
+    # for each replicate
+    for i in range(3):
+
+        # for each concentration
+        for j in range(12):
+
+            row_pos = dose_response_map[str(i)][0]
+            row_neg = dose_response_map[str(i)][1]
+            col = j+1
+
+            # (+) protein
+            WL_pos = [int(x) for x in df.get_well(f"{row_pos}{col}").index.to_numpy()]
+            fl_pos = df.get_well(f"{row_pos}{col}").to_numpy()
+            pos = np.dot(WL_pos, fl_pos)
+
+            # (-) protein
+            WL_neg = [int(x) for x in df.get_well(f"{row_neg}{col}").index.to_numpy()]
+            fl_neg = df.get_well(f"{row_neg}{col}").to_numpy()
+            neg = np.dot(WL_neg, fl_neg)
+
+            dose_response = pos - neg
+
+            axes[i].plot(concentrations[j], dose_response, "ko")
+
+    plt.suptitle(f"{protein}:{ligand}")
 
     if pdf is not None:
         pdf.savefig()
