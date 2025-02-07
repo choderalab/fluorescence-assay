@@ -284,10 +284,11 @@ def plot_absorbance_280(
 
     fig, ax = plt.subplots()
 
-    A280 = df.get_WL("280")
+    pos = [[df.get_WL("280").series.loc[f"{row}{x}"] for x in range(1,13)] for row in ["A", "C", "E"]]
+    neg = [[df.get_WL("280").series.loc[f"{row}{x}"] for x in range(1,13)] for row in ["B", "D", "F"]]
 
-    pos = [A280.get_row(row) for row in ["A", "C", "E"]]  # (+) protein
-    neg = [A280.get_row(row) for row in ["B", "D", "F"]]  # (-) protein
+    # pos = [A280.get_row(row) for row in ["A", "C", "E"]]  # (+) protein
+    # neg = [A280.get_row(row) for row in ["B", "D", "F"]]  # (-) protein
 
     spectra = [pos, neg]
 
@@ -316,7 +317,8 @@ def plot_absorbance_280(
     ax.set_box_aspect(1)
     ax.set_xlabel("Concentration (µM)")
     ax.set_ylabel("Absorbance at 280 nm (AU)")
-    ax.set_xlim([-0.05, 1.05])
+    #ax.set_xlim([-0.05, 1.05])
+    ax.set_xscale("log")
     ax.set_title(f"{protein}:{ligand}")
     ax.legend()
 
@@ -354,8 +356,11 @@ def plot_dose_response_curves(
 
     for i in range(3):
 
-        pos = df.get_WL("440").get_row(dose_response_map[str(i)][0])  # (+) protein
-        neg = df.get_WL("440").get_row(dose_response_map[str(i)][1])  # (-) protein
+        # pos = df.get_WL("440").get_row(dose_response_map[str(i)][0])  # (+) protein
+        # neg = df.get_WL("440").get_row(dose_response_map[str(i)][1])  # (-) protein
+
+        pos = np.array([df.get_WL("440").series.loc[f"{dose_response_map[str(i)][0]}{x}"] for x in range(1,13)])
+        neg = np.array([df.get_WL("440").series.loc[f"{dose_response_map[str(i)][1]}{x}"] for x in range(1,13)])
 
         dose_response = pos - neg
 
