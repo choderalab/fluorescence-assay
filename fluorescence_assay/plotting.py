@@ -419,3 +419,65 @@ def plot_dose_response_curves_dotproduct(
     if pdf is not None:
         pdf.savefig()
         plt.close()
+
+def plot_fluorescence_spectra_defined(
+    df: plate_reader.DFData,
+    concentrations: List[float],
+    col: int,
+    protein: str,
+    ligand: str,
+    pdf: Optional[PdfPages] = None,
+):
+    """"""
+
+    fig = plt.figure(figsize=(21, 7))
+
+    concentration = concentrations[col-1]
+    col = str(col)
+
+    axes = create_grid_of_plots(
+        1,
+        3,
+        hspace=0,
+        wspace=0.04,
+        fig=fig,
+        yscale="log",
+        xlabel="Emission Wavelength (nm)",
+        ylabel="Fluorescence (RFU)",
+        titles=["Replicate 1", "Replicate 2", "Replicate 3"],
+    )
+
+    plot2row = {"0": ("A", "B"), "1": ("C", "D"), "2": ("E", "F")}
+
+    for i in range(3):
+
+        ax = axes[i]
+
+        row_pos = plot2row[str(i)][0]
+        row_neg = plot2row[str(i)][1]
+
+        well_pos = f"{row_pos}{col}"
+        well_neg = f"{row_neg}{col}"
+
+        pos = df.get_well(well_pos)
+        neg = df.get_well(well_neg)
+
+        xx_pos = [int(x) for x in pos.index.to_list()]
+        yy_pos = pos.to_numpy()
+
+        xx_neg = [int(x) for x in neg.index.to_list()]
+        yy_neg = neg.to_numpy()
+
+        ax.plot(xx_pos, yy_pos, "k-", label="+Protein")
+        ax.plot(xx_neg, yy_neg, "k--", label="-Protein")
+
+        ax.legend()
+
+        ax.set_xlim([380, 600])
+        ax.set_ylim([1e1, 1e5])
+
+    plt.suptitle(f"{protein}:{ligand}, column={col} (concentration={concentration} µM)")
+
+    if pdf is not None:
+        pdf.savefig()
+        plt.close()
