@@ -3,78 +3,161 @@
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Dict, List, Optional, Union
 
+import numpy as np
+import pandas as pd
 from bs4 import BeautifulSoup
 
 logger = logging.getLogger(__name__)
 
 
 @dataclass
-class Measurements(ABC):
-    """"""
-
-    @abstractmethod
-    def read_file(self, filepath: str, *args, **kwargs) -> None:
-        """"""
-        ...
-
-    @abstractmethod
-    def get_well(self, *args, **kwargs) -> dict:
-        """"""
-        ...
-
-    @abstractmethod
-    def get_parameter(self, *args, **kwargs):
-        """"""
-        ...
-
-
-@dataclass
-class IControlXML(Measurements):
+class Data(ABC):
     """"""
 
     _data: dict = field(default_factory=dict, init=False)
 
-    def read_file(self, filepath: str, filter: Optional[list[str]] = None) -> None:
+    def read_IControlXML(self, filepath: str, name: Optional[str] = None) -> None:
         """"""
+
+        if name is None:
+            name = filepath
+
+        xmldict = {}
 
         with open(filepath) as file:
-            self._data = BeautifulSoup(file, "xml")
+            input = BeautifulSoup(file, "xml")
 
-    def get_data(self):
-        """"""
+        # parse XML for relevant information
+        # store in nested dictionary
 
-        return self._data
-
-    def get_well(self, section, well, cycle: Optional[int] = 1):
-        """"""
-
-        def fix_type(val):
-            try:
-                return float(val)
-            except:
-                return float("nan")
-
-        data = {
-            int(scan["WL"]): fix_type(scan.contents[0])
-            for scan in self._data.select(
-                f'Section[Name="{section}"] > Data[Cycle="{str(cycle)}"] > Well[Pos="{well}"] > Scan'
-            )
+        xmldict[name] = {
+            section["Name"]: {
+                cycle["Cycle"]: {
+                    well["Pos"]: {
+                        scan["WL"]: scan.contents[0] for scan in well.select("Scan")
+                    }
+                    for well in cycle.select("Well")
+                }
+                for cycle in section.select("Data")
+            }
+            for section in input.select("Section")
         }
 
-        return data
+        # convert to DataFrame
 
-    def get_parameter(self, section, parameter):
+        for file, file_data in xmldict.items():
+            for section, section_data in file_data.items():
+                for cycle, cycle_data in section_data.items():
 
-        def fix_type(val):
-            try:
-                return float(val)
-            except:
-                return val
+                    df = pd.DataFrame(cycle_data)
+                    df = df.apply(pd.to_numeric, errors="coerce")
 
-        return fix_type(
-            self._data.select(
-                f'Section[Name="{section}"] > Parameters > Parameter[Name="{parameter}"]'
-            )[0]["Value"]
-        )
+                    self._data[f"{file}_{section}_{cycle}"] = DFData(df)
+
+    def get_df(self, df: str) -> pd.DataFrame:
+
+        return self._data[df]
+
+    def to_excel(self, filepath: str) -> None:
+
+        with pd.ExcelWriter(filepath) as writer:
+
+            for sheet_name in self._data.keys():
+
+                self.get_df(sheet_name).pd.to_excel(writer, sheet_name=sheet_name)
+
+
+@dataclass
+class DFData:
+    """"""
+
+    df: pd.DataFrame
+
+    def get_WL(self, WL: int):
+        """"""
+
+        return Wavelength(self.df.loc[str(WL)])
+
+    def get_plate(self, WL: int, format: Optional[int] = None):
+        """"""
+
+        if format is None:
+            format = "96"
+
+        if format == "96":
+            plate = np.zeros((8, 12))
+
+        data = self.get_WL(WL)
+
+        for series_index in data.index.tolist():
+
+            alpha2num = {"A": 0, "B": 1, "C": 2, "D": 3, "E": 4, "F": 5, "G": 6, "H": 7}
+
+            row = alpha2num[series_index[0]]
+            col = int(series_index[1]) - 1
+
+            plate[row, col] = data.loc[series_index]
+
+        return plate
+
+    def get_well(self, well: str) -> pd.Series:
+        """"""
+
+        return self.df[well]
+
+    def get_row(self, row: Union[str, int]) -> list[pd.Series]:
+        """"""
+
+        num2alpha = {
+            "0": "A",
+            "1": "B",
+            "2": "C",
+            "3": "D",
+            "4": "E",
+            "5": "F",
+            "6": "G",
+            "7": "H",
+        }
+
+        if type(row) == int:
+            row = num2alpha[str(row)]
+
+        return [self.get_well(pos) for pos in [f"{row}{i}" for i in range(1, 13)]]
+
+    @property
+    def pd(self):
+        """"""
+
+        return self.df
+
+
+@dataclass
+class Wavelength:
+    """"""
+
+    series: pd.Series
+
+    alpha2num = {"A": 0, "B": 1, "C": 2, "D": 3, "E": 4, "F": 5, "G": 6, "H": 7}
+
+    @property
+    def plate(self):
+
+        plate = np.zeros((8, 12))
+
+        for series_index in self.series.index.tolist():
+
+            row = self.alpha2num[series_index[0]]
+            col = int(series_index[1]) - 1
+
+            plate[row, col] = self.series.loc[series_index]
+
+        return plate
+
+    def get_row(self, row: Union[str, int]):
+
+        if type(row) == str:
+            row = self.alpha2num[row]
+
+        return self.plate[row]

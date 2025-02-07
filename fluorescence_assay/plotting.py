@@ -1,191 +1,508 @@
 """Module to plot parsed plate reader ouptputs."""
 
-from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
-from typing import Optional
+from typing import List, Optional
 
-import matplotlib
-import matplotlib.axes
+import matplotlib.colors as colors
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
+from matplotlib import cm
+from matplotlib.axes import Axes
+from matplotlib.backends.backend_pdf import PdfPages
+from matplotlib.figure import Figure
 
-from .plate_reader import IControlXML, Measurements
+from . import plate_reader
 
 
-@dataclass
-class Plot(ABC):
+def plot_spectra(
+    spectra: list[pd.Series],
+    concentrations: list[float],
+    axes: Optional[Axes] = None,
+    cmap: Optional[str] = None,
+    norm: Optional[bool] = None,
+) -> None:
+    """
+    This function plots spectra of given concentrations with a colormap.
+    """
+
+    if axes is None:
+        fig, axes = plt.subplots()
+    if cmap is None:
+        cmap = "winter_r"
+    if norm is None:
+        norm = plt.Normalize(vmin=min(concentrations), vmax=max(concentrations))
+
+    cmap = plt.get_cmap(cmap)
+
+    numSpectra = len(concentrations)
+
+    for i in range(numSpectra):
+
+        spectrum = spectra[i]
+
+        xx_i = [int(x) for x in spectrum.index.to_list()]
+        yy_i = spectrum.to_numpy()
+
+        c = cmap(norm(concentrations[i]))
+
+        axes.plot(xx_i, yy_i, color=c)
+
+
+def create_grid_of_plots(
+    rows: int,
+    cols: int,
+    hspace: Optional[float],
+    wspace: Optional[float],
+    xlabel: Optional[str] = None,
+    ylabel: Optional[str] = None,
+    xscale: Optional[str] = None,
+    yscale: Optional[str] = None,
+    titles: Optional[list[str]] = None,
+    fig: Optional[Figure] = None,
+) -> list[Axes]:
     """"""
 
-    @abstractmethod
-    def load_data(self, Measurement: Measurements, *args, **kwargs) -> None:
-        """"""
-        ...
+    if fig is None:
+        fig = plt.figure()
+    if hspace is None:
+        hspace = 0
+    if wspace is None:
+        wspace = 0
+    if xscale is None:
+        xscale = "linear"
+    if yscale is None:
+        yscale = "linear"
+    if xlabel is None:
+        xlabel = ""
+    if ylabel is None:
+        ylabel = ""
+    if titles is None:
+        titles = ["" for i in range(cols)]
 
-    def format_plot(
-        self,
-        axes: matplotlib.axes._axes.Axes,
-        title: Optional[str] = None,
-        xlim: Optional[list[float]] = None,
-        ylim: Optional[list[float]] = None,
-        xlabel: Optional[str] = None,
-        ylabel: Optional[str] = None,
-        square: Optional[bool] = False,
-    ):
+    gs = fig.add_gridspec(rows, cols, hspace=hspace, wspace=wspace)
+    _ = gs.subplots(sharex="col", sharey="row")
 
-        if title is not None:
-            axes.set_title(title)
+    axes = fig.get_axes()
 
-        if xlim is not None:
-            axes.set_xlim(xlim)
+    for ax in axes:
+        ax.label_outer()
 
-        if ylim is not None:
-            axes.set_ylim(ylim)
+    for i in range(rows * cols):
+        axes[i].set_xscale(xscale)
+        axes[i].set_yscale(yscale)
 
-        if xlabel is not None:
-            axes.set_xlabel(xlabel)
+    xplots = np.arange(rows * cols - cols, rows * cols)
+    for i in xplots:
+        axes[i].set_xlabel(xlabel)
 
-        if ylabel is not None:
-            axes.set_ylabel(ylabel)
+    yplots = cols * np.arange(0, rows)
+    for i in yplots:
+        axes[i].set_ylabel(ylabel)
 
-        if square == True:
-            axes.set_box_aspect(1)
+    titleplots = np.arange(0, cols)
+    for i in titleplots:
+        axes[i].set_title(titles[i])
+
+    return axes
 
 
-@dataclass
-class IControlXMLPlot(Plot):
+#
+# Above functions are helpful plotting utilities with relatively general implementations
+# such that they can be used in multiple cases
+#
+# Below functions produce standard figures for a single assay format as described here
+# 96 well microplate with the following layout
+# - Rows:
+#   - "A": Replicate 1, (+) protein
+#   - "B": Replicate 1, (-) protein
+#   - "C": Replicate 2, (+) protein
+#   - "D": Replicate 2, (-) protein
+#   - "E": Replicate 3, (+) protein
+#   - "F": Replicate 3, (-) protein
+#   - "G": Empty
+#   - "H": Empty
+# - Columns: For nonempty wells, each column has a different concentration of ligand dispensed
+# Thus "A" - "B" gives the corrected fluorescence for replicate 1,
+# and each well corresponds to a different ligand concentration
+#
+# TODO: Generalize implementation of these plotting functions
+# TODO: Remove redundancies
+#
+
+
+def plot_fluorescence_spectra(
+    df: plate_reader.DFData,
+    concentrations: list[float],
+    protein: str,
+    ligand: str,
+    pdf: Optional[PdfPages] = None,
+):
     """"""
 
-    _plate_read: dict = field(default_factory=dict, init=False)
+    fig = plt.figure(figsize=(21, 14))
 
-    def load_data(self, IControlXML: IControlXML) -> None:
+    norm = colors.AsinhNorm(
+        linear_width=0.005, vmin=min(concentrations), vmax=max(concentrations)
+    )
 
-        self._plate_read = IControlXML
+    axes = create_grid_of_plots(
+        2,
+        3,
+        hspace=0,
+        wspace=0.04,
+        fig=fig,
+        yscale="log",
+        xlabel="Emission Wavelength (nm)",
+        ylabel="Fluorescence (RFU)",
+        titles=["Replicate 1", "Replicate 2", "Replicate 3"],
+    )
 
-    def get_wavelength_axis(self, section) -> np.ndarray:
+    plot2row = {"0": "A", "1": "C", "2": "E", "3": "B", "4": "D", "5": "F"}
 
-        lmin, lmax, lstep = (
-            self._plate_read.get_parameter(section, parameter)
-            for parameter in [
-                "Emission Wavelength Start",
-                "Emission Wavelength End",
-                "Emission Wavelength Step Size",
+    for i in range(6):
+
+        ax = axes[i]
+
+        row = plot2row[str(i)]
+
+        spectra = df.get_row(row)
+
+        if i in [0, 1, 2]:
+            cmap = "winter_r"
+        else:
+            cmap = "Greys"
+
+        plot_spectra(spectra, concentrations, ax, cmap=cmap, norm=norm)
+
+        ax.set_xlim([380, 600])
+        ax.set_ylim([1e1, 1e5])
+
+    x0, y0, dx, dy = axes[2].get_position().bounds
+    cax1 = fig.add_axes([x0 + dx + 0.01, y0, 0.0125, dy])
+    cax2 = fig.add_axes([x0 + dx + 0.01, y0 - dy, 0.0125, dy])
+
+    fig.colorbar(
+        cm.ScalarMappable(norm=norm, cmap="winter_r"),
+        cax=cax1,
+        ticks=[0, 0.25, 0.5, 0.75],
+        format="%.2f",
+        label="Ligand Concentration (µM) in (+) Protein",
+    )
+    fig.colorbar(
+        cm.ScalarMappable(norm=norm, cmap="Greys"),
+        cax=cax2,
+        ticks=[0, 0.25, 0.5, 0.75],
+        format="%.2f",
+        label="Ligand Concentration (µM) in (-) Protein",
+    )
+    plt.suptitle(f"{protein}:{ligand}")
+
+    if pdf is not None:
+        pdf.savefig()
+        plt.close()
+
+
+def plot_absorbance_spectra(
+    df: plate_reader.DFData,
+    concentrations: list[float],
+    protein: str,
+    ligand: str,
+    pdf: Optional[PdfPages] = None,
+):
+    """"""
+
+    fig = plt.figure(figsize=(21, 14))
+
+    norm = colors.AsinhNorm(
+        linear_width=0.005, vmin=min(concentrations), vmax=max(concentrations)
+    )
+
+    axes = create_grid_of_plots(
+        2,
+        3,
+        hspace=0,
+        wspace=0.04,
+        fig=fig,
+        xlabel="Wavelength (nm)",
+        ylabel="Absorbance (AU)",
+        titles=["Replicate 1", "Replicate 2", "Replicate 3"],
+    )
+
+    plot2row = {"0": "A", "1": "C", "2": "E", "3": "B", "4": "D", "5": "F"}
+
+    for i in range(6):
+
+        ax = axes[i]
+
+        row = plot2row[str(i)]
+
+        spectra = df.get_row(row)
+
+        if i in [0, 1, 2]:
+            cmap = "winter_r"
+        else:
+            cmap = "Greys"
+
+        plot_spectra(spectra, concentrations, ax, cmap=cmap, norm=norm)
+
+        ax.set_xlim([240, 800])
+        ax.set_ylim([0, 5])
+
+    x0, y0, dx, dy = axes[2].get_position().bounds
+    cax1 = fig.add_axes([x0 + dx + 0.01, y0, 0.0125, dy])
+    cax2 = fig.add_axes([x0 + dx + 0.01, y0 - dy, 0.0125, dy])
+
+    fig.colorbar(
+        cm.ScalarMappable(norm=norm, cmap="winter_r"),
+        cax=cax1,
+        ticks=[0, 0.25, 0.5, 0.75],
+        format="%.2f",
+        label="Ligand Concentration (µM) in (+) Protein",
+    )
+    fig.colorbar(
+        cm.ScalarMappable(norm=norm, cmap="Greys"),
+        cax=cax2,
+        ticks=[0, 0.25, 0.5, 0.75],
+        format="%.2f",
+        label="Ligand Concentration (µM) in (-) Protein",
+    )
+    plt.suptitle(f"{protein}:{ligand}")
+
+    if pdf is not None:
+        pdf.savefig()
+        plt.close()
+
+
+def plot_absorbance_280(
+    df: plate_reader.DFData,
+    concentrations: list[float],
+    protein: str,
+    ligand: str,
+    pdf: Optional[PdfPages] = None,
+):
+    """"""
+
+    fig, ax = plt.subplots()
+
+    pos = [
+        [df.get_WL("280").series.loc[f"{row}{x}"] for x in range(1, 13)]
+        for row in ["A", "C", "E"]
+    ]
+    neg = [
+        [df.get_WL("280").series.loc[f"{row}{x}"] for x in range(1, 13)]
+        for row in ["B", "D", "F"]
+    ]
+
+    # pos = [A280.get_row(row) for row in ["A", "C", "E"]]  # (+) protein
+    # neg = [A280.get_row(row) for row in ["B", "D", "F"]]  # (-) protein
+
+    spectra = [pos, neg]
+
+    colors = ["red", "blue", "green"]
+    markers = ["+", "."]
+    label = ["+", "-"]
+
+    for i in range(len(spectra)):
+
+        m = markers[i]
+
+        for j in range(len(spectra[i])):
+
+            c = colors[j]
+            s = spectra[i][j]
+
+            ax.plot(
+                concentrations,
+                s,
+                color=c,
+                marker=m,
+                linestyle="None",
+                label=f"Replicate {j+1}, {label[i]}Protein",
+            )
+
+    ax.set_box_aspect(1)
+    ax.set_xlabel("Concentration (µM)")
+    ax.set_ylabel("Absorbance at 280 nm (AU)")
+    # ax.set_xlim([-0.05, 1.05])
+    ax.set_xscale("log")
+    ax.set_title(f"{protein}:{ligand}")
+    ax.legend()
+
+    plt.suptitle(f"{protein}:{ligand}")
+
+    if pdf is not None:
+        pdf.savefig()
+        plt.close()
+
+
+def plot_dose_response_curves(
+    df: plate_reader.DFData,
+    concentrations: list[float],
+    protein: str,
+    ligand: str,
+    pdf: Optional[PdfPages] = None,
+):
+    """"""
+
+    fig = plt.figure(figsize=(21, 7))
+
+    axes = create_grid_of_plots(
+        1,
+        3,
+        hspace=0,
+        wspace=0.05,
+        fig=fig,
+        xscale="log",
+        xlabel="Concentration (µM)",
+        ylabel="Corrected Emission at 440 nm (RFU)",
+        titles=["Replicate 1", "Replicate 2", "Replicate 3"],
+    )
+
+    dose_response_map = {"0": ("A", "B"), "1": ("C", "D"), "2": ("E", "F")}
+
+    for i in range(3):
+
+        # pos = df.get_WL("440").get_row(dose_response_map[str(i)][0])  # (+) protein
+        # neg = df.get_WL("440").get_row(dose_response_map[str(i)][1])  # (-) protein
+
+        pos = np.array(
+            [
+                df.get_WL("440").series.loc[f"{dose_response_map[str(i)][0]}{x}"]
+                for x in range(1, 13)
+            ]
+        )
+        neg = np.array(
+            [
+                df.get_WL("440").series.loc[f"{dose_response_map[str(i)][1]}{x}"]
+                for x in range(1, 13)
             ]
         )
 
-        return np.arange(lmin, lmax + lstep, lstep)
+        dose_response = pos - neg
 
-    def plot_well_spectrum(
-        self,
-        axes: matplotlib.axes._axes.Axes,
-        section: str,
-        well: str,
-        cycle: Optional[int] = 1,
-        color: Optional[tuple] = (0, 0, 0),
-        label: Optional[str] = None,
-    ) -> None:
+        axes[i].plot(concentrations, dose_response, "ko")
 
-        data = np.array(list(self._plate_read.get_well(section, well, cycle).values()))
+    plt.suptitle(f"{protein}:{ligand}")
 
-        ll = self.get_wavelength_axis(section)
+    if pdf is not None:
+        pdf.savefig()
+        plt.close()
 
-        axes.plot(ll, data, color=color, label=label)
 
-    def plot_corrected_spectrum(
-        self,
-        axes: matplotlib.axes._axes.Axes,
-        section: str,
-        well_foreground: str,
-        well_background: str,
-        cycle: Optional[int] = 1,
-        color: Optional[tuple] = (0, 0, 0),
-        label: Optional[str] = None,
-    ) -> None:
+def plot_dose_response_curves_dotproduct(
+    df: plate_reader.DFData,
+    concentrations: list[float],
+    protein: str,
+    ligand: str,
+    pdf: Optional[PdfPages] = None,
+):
+    """"""
 
-        foreground = np.array(
-            list(self._plate_read.get_well(section, well_foreground, cycle).values())
-        )
-        background = np.array(
-            list(self._plate_read.get_well(section, well_background, cycle).values())
-        )
+    fig = plt.figure(figsize=(21, 7))
 
-        difference = foreground - background
+    axes = create_grid_of_plots(
+        1,
+        3,
+        hspace=0,
+        wspace=0.05,
+        fig=fig,
+        xscale="log",
+        xlabel="Concentration (µM)",
+        ylabel="Corrected Emission at 440 nm (RFU)",
+        titles=["Replicate 1", "Replicate 2", "Replicate 3"],
+    )
 
-        ll = self.get_wavelength_axis(section)
+    dose_response_map = {"0": ("A", "B"), "1": ("C", "D"), "2": ("E", "F")}
 
-        axes.plot(ll, difference, color=color, label=label)
+    # for each replicate
+    for i in range(3):
 
-    def plot_dose_response(
-        self,
-        axes: matplotlib.axes._axes.Axes,
-        section: str,
-        row_foreground: str,
-        row_background: str,
-        wavelength: int,
-        concentrations: list[float],
-        cycle: Optional[int] = 1,
-        color: Optional[tuple] = (0, 0, 0),
-        label: Optional[str] = None,
-    ) -> None:
+        # for each concentration
+        for j in range(12):
 
-        differences = []
+            row_pos = dose_response_map[str(i)][0]
+            row_neg = dose_response_map[str(i)][1]
+            col = j + 1
 
-        for i in range(len(concentrations)):
+            # (+) protein
+            WL_pos = [int(x) for x in df.get_well(f"{row_pos}{col}").index.to_numpy()]
+            fl_pos = df.get_well(f"{row_pos}{col}").to_numpy()
+            pos = np.dot(WL_pos, fl_pos)
 
-            foreground = self._plate_read.get_well(
-                section, f"{row_foreground}{i+1}", cycle
-            )[wavelength]
-            background = self._plate_read.get_well(
-                section, f"{row_background}{i+1}", cycle
-            )[wavelength]
+            # (-) protein
+            WL_neg = [int(x) for x in df.get_well(f"{row_neg}{col}").index.to_numpy()]
+            fl_neg = df.get_well(f"{row_neg}{col}").to_numpy()
+            neg = np.dot(WL_neg, fl_neg)
 
-            difference = foreground - background
+            dose_response = pos - neg
 
-            differences.append(difference)
+            axes[i].plot(concentrations[j], dose_response, "ko")
 
-        axes.plot(concentrations, differences, ".", color=color, label=label)
+    plt.suptitle(f"{protein}:{ligand}")
 
-    def plot_absorption_spectrum(
-        self,
-        axes: matplotlib.axes._axes.Axes,
-        section: str,
-        well: str,
-        cycle: Optional[int] = 1,
-        color: Optional[tuple] = (0, 0, 0),
-        label: Optional[str] = None,
-    ) -> None:
+    if pdf is not None:
+        pdf.savefig()
+        plt.close()
 
-        data = np.array(list(self._plate_read.get_well(section, well, cycle).values()))
 
-        lmin, lmax, lstep = (
-            # hardcoding these values temporarily
-            # TODO: Undo this!
-            240,
-            800,
-            5,
-        )
+def plot_fluorescence_spectra_defined(
+    df: plate_reader.DFData,
+    concentrations: list[float],
+    col: int,
+    protein: str,
+    ligand: str,
+    pdf: Optional[PdfPages] = None,
+):
+    """"""
 
-        ll = np.arange(lmin, lmax + lstep, lstep)
+    fig = plt.figure(figsize=(21, 7))
 
-        axes.plot(ll, data, color=color, label=label)
+    concentration = concentrations[col - 1]
+    col = str(col)
 
-    def plot_absorption_across_row(
-        self,
-        axes: matplotlib.axes._axes.Axes,
-        section: str,
-        row: str,
-        wavelength: int,
-        concentrations: list[float],
-        cycle: Optional[int] = 1,
-        color: Optional[tuple] = (0, 0, 0),
-        label: Optional[str] = None,
-    ) -> None:
+    axes = create_grid_of_plots(
+        1,
+        3,
+        hspace=0,
+        wspace=0.04,
+        fig=fig,
+        yscale="log",
+        xlabel="Emission Wavelength (nm)",
+        ylabel="Fluorescence (RFU)",
+        titles=["Replicate 1", "Replicate 2", "Replicate 3"],
+    )
 
-        values = []
+    plot2row = {"0": ("A", "B"), "1": ("C", "D"), "2": ("E", "F")}
 
-        for i in range(len(concentrations)):
+    for i in range(3):
 
-            value = self._plate_read.get_well(section, f"{row}{i+1}", cycle)[wavelength]
+        ax = axes[i]
 
-            values.append(value)
+        row_pos = plot2row[str(i)][0]
+        row_neg = plot2row[str(i)][1]
 
-        axes.plot(concentrations, values, ".", color=color, label=label)
+        well_pos = f"{row_pos}{col}"
+        well_neg = f"{row_neg}{col}"
+
+        pos = df.get_well(well_pos)
+        neg = df.get_well(well_neg)
+
+        xx_pos = [int(x) for x in pos.index.to_list()]
+        yy_pos = pos.to_numpy()
+
+        xx_neg = [int(x) for x in neg.index.to_list()]
+        yy_neg = neg.to_numpy()
+
+        ax.plot(xx_pos, yy_pos, "k-", label="+Protein")
+        ax.plot(xx_neg, yy_neg, "k--", label="-Protein")
+
+        ax.legend()
+
+        ax.set_xlim([380, 600])
+        ax.set_ylim([1e1, 1e5])
+
+    plt.suptitle(f"{protein}:{ligand}, column={col} (concentration={concentration} µM)")
+
+    if pdf is not None:
+        pdf.savefig()
+        plt.close()
