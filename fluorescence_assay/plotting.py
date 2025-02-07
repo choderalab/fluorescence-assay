@@ -366,6 +366,7 @@ def plot_dose_response_curves(
         pdf.savefig()
         plt.close()
 
+
 def plot_dose_response_curves_dotproduct(
     df: plate_reader.DFData,
     concentrations: list[float],
@@ -398,7 +399,7 @@ def plot_dose_response_curves_dotproduct(
 
             row_pos = dose_response_map[str(i)][0]
             row_neg = dose_response_map[str(i)][1]
-            col = j+1
+            col = j + 1
 
             # (+) protein
             WL_pos = [int(x) for x in df.get_well(f"{row_pos}{col}").index.to_numpy()]
@@ -420,9 +421,10 @@ def plot_dose_response_curves_dotproduct(
         pdf.savefig()
         plt.close()
 
+
 def plot_fluorescence_spectra_defined(
     df: plate_reader.DFData,
-    concentrations: List[float],
+    concentrations: list[float],
     col: int,
     protein: str,
     ligand: str,
@@ -432,7 +434,7 @@ def plot_fluorescence_spectra_defined(
 
     fig = plt.figure(figsize=(21, 7))
 
-    concentration = concentrations[col-1]
+    concentration = concentrations[col - 1]
     col = str(col)
 
     axes = create_grid_of_plots(
