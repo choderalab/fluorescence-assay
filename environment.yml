@@ -113,4 +113,3 @@ dependencies:
   - pip:
       - beautifulsoup4==4.13.3
       - soupsieve==2.6
-
