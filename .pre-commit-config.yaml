@@ -2,28 +2,28 @@ ci:
   autoupdate_schedule: "quarterly"
 repos:
 - repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v5.0.0
+  rev: v6.0.0
   hooks:
   - id: end-of-file-fixer
   - id: trailing-whitespace
-- repo: https://github.com/psf/black
-  rev: 24.8.0
+- repo: https://github.com/psf/black-pre-commit-mirror
+  rev: 25.9.0
   hooks:
   - id: black
     files: ^fluorescence_assay
 - repo: https://github.com/PyCQA/isort
-  rev: 5.13.2
+  rev: 6.1.0
   hooks:
   - id: isort
     files: ^fluorescence_assay
 - repo: https://github.com/PyCQA/flake8
-  rev: 7.1.1
+  rev: 7.3.0
   hooks:
   - id: flake8
     files: ^fluorescence_assay
     additional_dependencies: [Flake8-pyproject]
 - repo: https://github.com/asottile/pyupgrade
-  rev: 'v3.17.0'
+  rev: 'v3.20.0'
   hooks:
   - id: pyupgrade
     args:
